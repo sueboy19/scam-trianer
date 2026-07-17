@@ -1,0 +1,65 @@
+# ============================================
+# 開發環境 docker-compose（雙容器 + Hot Reload）
+# ============================================
+# 用途：本機開發，Vite HMR (5173) + Express watch (3000)
+# 啟動：docker compose up
+#
+# 注意：WSL 已有 Node，建議直接用 `npm run dev` 會更快；
+#       此檔提供給想用容器化開發的人。
+#
+# 若 WSL 未裝 docker，請改用根目錄 package.json 的 `npm run dev`。
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+      target: api-deps
+    image: scam-trainer-api:dev
+    container_name: scam-trainer-api-dev
+    working_dir: /app/server
+    volumes:
+      # 掛載原始碼以實現 hot reload
+      - ./server/src:/app/server/src
+      - ./server/package.json:/app/server/package.json
+      - ./server/tsconfig.json:/app/server/tsconfig.json
+      - ./scripts:/app/scripts
+      - ./data:/app/data
+      - ./client/package.json:/app/client/package.json:ro
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - DB_PATH=/app/data/app.db
+      - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET:-dev-only-insecure-secret-change-me}
+      - BETTER_AUTH_URL=http://localhost:3000
+      - CLIENT_URL=http://localhost:5173
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
+    command: ["npx", "tsx", "watch", "src/index.ts"]
+    restart: unless-stopped
+
+  client:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+      target: client-deps
+    image: scam-trainer-client:dev
+    container_name: scam-trainer-client-dev
+    working_dir: /app/client
+    volumes:
+      - ./client/src:/app/client/src
+      - ./client/index.html:/app/client/index.html
+      - ./client/vite.config.ts:/app/client/vite.config.ts
+      - ./client/tailwind.config.js:/app/client/tailwind.config.js
+      - ./client/postcss.config.js:/app/client/postcss.config.js
+      - ./client/package.json:/app/client/package.json
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:3000
+    command: ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+    depends_on:
+      - api
+    restart: unless-stopped

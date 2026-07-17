@@ -1,0 +1,37 @@
+# Dependencies
+node_modules/
+client/node_modules/
+server/node_modules/
+
+# Build output
+client/dist/
+server/dist/
+server/public/
+
+# Env & secrets
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# SQLite data
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+data/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor
+.vscode/
+.idea/
+.DS_Store
+
+# Agent session state
+.zcode/
+
+# Test coverage
+coverage/

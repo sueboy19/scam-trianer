@@ -1,0 +1,23 @@
+{
+  "name": "scam-trainer",
+  "version": "0.1.0",
+  "private": true,
+  "description": "台灣詐騙防制互動訓練網站",
+  "scripts": {
+    "_note": "=== 以下 script 在根目錄執行，會同時操作 client 與 server ===",
+    "install:all": "npm install && npm --prefix client install && npm --prefix server install",
+    "dev": "concurrently -n api,web -c blue,green \"npm:dev:api\" \"npm:dev:web\"",
+    "dev:api": "npm --prefix server run dev",
+    "dev:web": "npm --prefix client run dev",
+    "build": "npm --prefix client run build && npm --prefix server run build",
+    "start": "npm --prefix server start",
+    "seed": "npm --prefix server run seed",
+    "typecheck": "npm --prefix client run typecheck && npm --prefix server run typecheck"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

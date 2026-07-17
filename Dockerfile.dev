@@ -1,0 +1,33 @@
+# ============================================
+# 開發環境 Dockerfile（多階段：分離 client/api 依賴安裝）
+# ============================================
+# 給 docker-compose.yml（開發用）使用。
+# 只負責「安裝依賴」，原始碼透過 volume 掛載以實現 hot reload。
+
+# ===== api 依賴 stage =====
+FROM node:20-alpine AS api-deps
+
+RUN apk add --no-cache python3 make g++
+
+WORKDIR /app
+COPY server/package.json server/package-lock.json* ./server/
+# 根目錄與 client 的 package.json 也需要（docker-compose volume 掛載時參考）
+COPY package.json ./
+COPY scripts ./scripts
+
+RUN cd server && (npm ci --legacy-peer-deps || npm install --legacy-peer-deps)
+
+# tsx 已在 server devDependencies；確認可用
+WORKDIR /app/server
+CMD ["npx", "tsx", "watch", "src/index.ts"]
+
+# ===== client 依賴 stage =====
+FROM node:20-alpine AS client-deps
+
+WORKDIR /app
+COPY client/package.json client/package-lock.json* ./client/
+
+RUN cd client && (npm ci || npm install)
+
+WORKDIR /app/client
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]

@@ -1,0 +1,56 @@
+# ============================================
+# 正式環境 docker-compose（單容器，Coolify 部署用）
+# ============================================
+# 用途：Coolify 讀取此檔部署到正式機
+# 特點：單一容器（Express 同時 serve API + 靜態 Vue）、低資源、有 healthcheck
+#
+# Coolify 部署步驟：
+#   1. 連結 Git repo，Build Pack 選 Docker Compose，Compose Path 指到此檔
+#   2. Environment Variables 填入所有 secrets（見 .env.example）
+#   3. Domains 設 https://你的網域，綁到 app service 的 port 3000
+#   4. 確認 Storages 有 /app/data 的 persistent volume（或靠下方 named volume）
+#   5. DNS A record 指向 VM IP → 部署（Traefik 自動處理 HTTPS）
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ${COOLIFY_CONTAINER_NAME:-scam-trainer}
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - NODE_OPTIONS=--max-old-space-size=200
+      - PORT=3000
+      - DB_PATH=/app/data/app.db
+      - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET:?BETTER_AUTH_SECRET must be set}
+      - BETTER_AUTH_URL=${BETTER_AUTH_URL:?BETTER_AUTH_URL must be set}
+      - CLIENT_URL=${CLIENT_URL:-${BETTER_AUTH_URL}}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
+      - FACEBOOK_CLIENT_ID=${FACEBOOK_CLIENT_ID:-}
+      - FACEBOOK_CLIENT_SECRET=${FACEBOOK_CLIENT_SECRET:-}
+      - LINE_CHANNEL_ID=${LINE_CHANNEL_ID:-}
+      - LINE_CHANNEL_SECRET=${LINE_CHANNEL_SECRET:-}
+      - INSTAGRAM_CLIENT_ID=${INSTAGRAM_CLIENT_ID:-}
+      - INSTAGRAM_CLIENT_SECRET=${INSTAGRAM_CLIENT_SECRET:-}
+    volumes:
+      - sqlite_data:/app/data
+    expose:
+      - "3000"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 256M
+        reservations:
+          memory: 64M
+
+volumes:
+  sqlite_data:
