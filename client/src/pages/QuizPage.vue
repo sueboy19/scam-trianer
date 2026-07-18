@@ -21,6 +21,8 @@ const selectedIdx = ref<number | null>(null);
 const responses = ref<Array<{ stepIndex: number; choiceIndex: number; isCorrect: boolean }>>([]);
 const submitting = ref(false);
 const startedAt = Date.now();
+/** 情境沉浸動畫是否完成；完成後才顯示作答選項。 */
+const scenarioReady = ref(false);
 
 const currentStep = computed(() => scenario.value?.steps[stepIdx.value] ?? null);
 const revealed = computed(() => selectedIdx.value !== null);
@@ -59,6 +61,7 @@ function next() {
   if (!isLast.value) {
     stepIdx.value++;
     selectedIdx.value = null;
+    scenarioReady.value = false;
   } else {
     finish();
   }
@@ -124,20 +127,27 @@ async function finish() {
         </div>
 
         <!-- 情境呈現 -->
-        <ScenarioView :step="currentStep" />
+        <ScenarioView :step="currentStep" @ready="scenarioReady = true" />
 
-        <!-- 選項 -->
-        <div class="space-y-2 mt-4">
-          <ChoiceButton
-            v-for="(c, i) in currentStep.choices"
-            :key="i"
-            :choice="c"
-            :index="i"
-            :revealed="revealed"
-            :selected="selectedIdx === i"
-            @choose="choose"
-          />
-        </div>
+        <!-- 引導提示 -->
+        <p v-if="!scenarioReady" class="mt-3 animate-pulse text-center text-xs text-slate-400">
+          👆 先操作手機看完情境，再作答
+        </p>
+
+        <!-- 選項（沉浸完成後淡入） -->
+        <Transition name="fade-up">
+          <div v-if="scenarioReady" class="space-y-2 mt-4">
+            <ChoiceButton
+              v-for="(c, i) in currentStep.choices"
+              :key="i"
+              :choice="c"
+              :index="i"
+              :revealed="revealed"
+              :selected="selectedIdx === i"
+              @choose="choose"
+            />
+          </div>
+        </Transition>
 
         <!-- 回饋 -->
         <div v-if="revealed && selectedIdx !== null" class="mt-4">

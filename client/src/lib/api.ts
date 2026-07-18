@@ -45,6 +45,17 @@ export interface Choice {
   explanation: string;
 }
 
+/** 決定手機內 APP 圖示與介面風格。 */
+export type AppName =
+  | 'phone'      // 來電
+  | 'sms'        // 簡訊
+  | 'line'       // LINE 聊天
+  | 'ig'         // Instagram DM
+  | 'fb'         // Facebook
+  | 'telegram'   // Telegram
+  | 'twitter'    // Twitter / X 私訊
+  | 'email';     // 信箱
+
 export interface Step {
   stepIndex: number;
   uiType: 'phone_call' | 'message' | 'email' | 'chat' | 'social_post';
@@ -52,6 +63,21 @@ export interface Step {
   dialogue: string;
   image: string | null;
   choices: Choice[];
+  // ↓ 沉浸式模擬用（皆為選填，未提供時走智慧預設）↓
+  /** 寄件者 / 來電者顯示名稱。 */
+  sender?: string;
+  /** 來電號碼或帳號（如 +886-2-2345-6789）。 */
+  phone?: string;
+  /** APP 圖示與介面風格；未指定時依 uiType 自動推斷。 */
+  appName?: AppName;
+  /** emoji 大頭貼；未指定時依 appName 預設。 */
+  avatar?: string;
+  /** 顯示時間（如「剛剛」「14:32」）。 */
+  timestamp?: string;
+  /** Email 主旨（僅 email 介面用）。 */
+  subject?: string;
+  /** 貼文圖片 emoji（社群貼文用）。 */
+  postImage?: string;
 }
 
 export interface ScenarioDetail extends ScenarioSummary {

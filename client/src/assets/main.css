@@ -7,7 +7,7 @@ body {
   @apply antialiased text-slate-800;
 }
 
-/* 共用元件樣式 */
+/* ===== 共用元件樣式 ===== */
 @layer components {
   .btn {
     @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 font-medium transition active:scale-[.98] disabled:opacity-50 disabled:cursor-not-allowed;
@@ -22,3 +22,54 @@ body {
     @apply bg-white rounded-2xl shadow-sm border border-slate-100;
   }
 }
+
+/* ===== 沉浸式手機模擬動畫 ===== */
+@keyframes phone-shake {
+  0%, 100% { transform: translate(0, 0) rotate(0); }
+  20% { transform: translate(-1px, 1px) rotate(-0.4deg); }
+  40% { transform: translate(1px, -1px) rotate(0.4deg); }
+  60% { transform: translate(-1px, 0) rotate(-0.3deg); }
+  80% { transform: translate(1px, 1px) rotate(0.2deg); }
+}
+@keyframes ring-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.55); }
+  70% { box-shadow: 0 0 0 18px rgba(34, 197, 94, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+}
+@keyframes slide-down {
+  from { opacity: 0; transform: translateY(-22px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes message-pop {
+  from { opacity: 0; transform: scale(0.92) translateY(8px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+@keyframes typing-dots {
+  0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
+  30% { opacity: 1; transform: translateY(-2px); }
+}
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Vue <Transition name="fade-up">：作答選項淡入 */
+.fade-up-enter-active {
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+.fade-up-enter-from {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+/* 尊重「減少動態」使用者偏好 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+

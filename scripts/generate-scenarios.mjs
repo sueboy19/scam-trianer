@@ -18,6 +18,7 @@ import { argv, exit } from 'node:process';
 
 const VALID_CATEGORIES = ['sms_call', 'crypto_emerging', 'social_media'];
 const VALID_UI_TYPES = ['phone_call', 'message', 'email', 'chat', 'social_post'];
+const VALID_APP_NAMES = ['phone', 'sms', 'line', 'ig', 'fb', 'telegram', 'twitter', 'email'];
 
 function validateScenario(s, idx) {
   const errs = [];
@@ -42,6 +43,7 @@ function validateScenario(s, idx) {
 
   steps.forEach((step, i) => {
     if (!VALID_UI_TYPES.includes(step.uiType)) errs.push(`step[${i}].uiType 需為 ${VALID_UI_TYPES.join('/')}`);
+    if (step.appName && !VALID_APP_NAMES.includes(step.appName)) errs.push(`step[${i}].appName 需為 ${VALID_APP_NAMES.join('/')}`);
     if (!Array.isArray(step.choices) || step.choices.length < 2) errs.push(`step[${i}].choices 至少 2 個`);
     const hasCorrect = step.choices?.some((c) => c.correct);
     if (!hasCorrect) errs.push(`step[${i}] 至少需 1 個 correct:true 的選項`);
