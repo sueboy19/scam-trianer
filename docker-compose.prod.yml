@@ -20,7 +20,9 @@ services:
     restart: unless-stopped
     environment:
       - NODE_ENV=production
-      - NODE_OPTIONS=--max-old-space-size=200
+      # 不設 NODE_OPTIONS=--max-old-space-size：讓 Node 20+ 依容器 cgroup 限制
+      # 自動偵測 heap 上限（手動設會覆蓋自動偵測，反而更差）。
+      # better-sqlite3 的 native 記憶體不在 V8 heap 內，需靠下方 memory limit 預留空間。
       - PORT=3000
       - DB_PATH=/app/data/app.db
       - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET:?BETTER_AUTH_SECRET must be set}
@@ -43,14 +45,18 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
-      start_period: 20s
+      # 冷啟動需載入 better-sqlite3 native binding + Better Auth + schema + seed，
+      # 首次/映像檔冷時可能接近 30s；拉長 start_period 避免被誤判 unhealthy 觸發重啟循環。
+      start_period: 40s
     deploy:
       resources:
         limits:
           cpus: "1.0"
-          memory: 256M
+          # native(sqlite) + V8 heap + 靜態檔需足夠空間；512M 對 2GB+ VM 無負擔，
+          # 且能吸收 OAuth/seed 尖峰，避免 OOM killed。
+          memory: 512M
         reservations:
-          memory: 64M
+          memory: 128M
 
 volumes:
   sqlite_data:

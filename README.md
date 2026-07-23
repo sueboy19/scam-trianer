@@ -10,7 +10,7 @@
 - **成績記錄**：登入後每次測驗計分、記錄個人歷史與各情境最佳成績
 - **常見錯誤排行榜**：統計全站「錯誤率最高」的題目，提前避險
 - **多社群登入**：Google / LINE / Facebook / Instagram（Better Auth）
-- **低資源部署**：單容器 + SQLite，~150MB RAM，Coolify 一鍵部署
+- **低資源部署**：單容器 + SQLite，實際使用約 80-150MB RAM（容器上限設 512M 以吸收尖峰），Coolify 一鍵部署
 
 ---
 
@@ -83,14 +83,26 @@ docker compose -f docker-compose.prod.yml up --build -d
 
 ## ☁️ Coolify 部署
 
+專案提供兩種 Coolify compose，依需求擇一：
+
+| 檔案 | 何時用 | 網域／Secret 設定方式 |
+|---|---|---|
+| `docker-compose.coolify.yml` | **推薦**。想省事、由 Coolify 自動處理網域與 secret | 用 `COOLIFY_URL` 自動填 `BETTER_AUTH_URL`／`CLIENT_URL`、`SERVICE_PASSWORD_64` 自動產 secret |
+| `docker-compose.prod.yml` | 想完全手控每個變數 | 在 UI 逐一手填 `BETTER_AUTH_SECRET`／`BETTER_AUTH_URL` 等 |
+
+### 推薦流程（用 `docker-compose.coolify.yml`）
+
 1. **Push 到 Git repo**（GitHub / GitLab / 自架 Gitea 皆可）
 2. 在 Coolify 建立 **New Resource** → 連結 repo
 3. **Build Pack** 選 `Docker Compose`
-4. **Compose Path** 設為 `docker-compose.prod.yml`
-5. **Environment Variables**：填入下方所有變數（secrets 不要 commit）
-6. **Domains**：設 `https://你的網域`，綁到 `app` service 的 port `3000`
+4. **Compose Path** 設為 `docker-compose.coolify.yml`
+5. **Domains**：設 `https://你的網域`，綁到 `app` service 的 port `3000`
+   → Coolify 會自動把該網域以 `COOLIFY_URL` 注入容器，應用自動套用為 `BETTER_AUTH_URL`／`CLIENT_URL`，**不必手填網域變數**
+6. **OAuth 憑證**（可選）：在 Environment Variables 填入想啟用的 provider（見 `.env.example`），未填即不自動啟用
 7. **Storages**：確認 `/app/data` 有 persistent storage（保護 SQLite 不被重新部署清空）
 8. DNS A record 指向 VM IP → 部署。Traefik 會自動處理 HTTPS 憑證。
+
+> 💡 `BETTER_AUTH_SECRET` 首次部署時由 Coolify 的 `SERVICE_PASSWORD_64` 自動產生 64 字元隨機字串；若你想用自訂值，在 Environment Variables 設 `BETTER_AUTH_SECRET` 即可覆蓋。
 
 ---
 
@@ -180,8 +192,9 @@ docker compose -f docker-compose.prod.yml up --build -d
 │  ├─ scenarios-seed.json   # 種子題庫
 │  └─ generate-scenarios.mjs  # （未來）離線生成腳本
 ├─ docker-compose.yml          # 開發環境（client + api 雙容器 + HMR）
-├─ docker-compose.prod.yml     # 正式環境（單容器，Coolify 用）
-├─ Dockerfile                  # 正式 build
+├─ docker-compose.coolify.yml  # 正式環境（單容器，Coolify 推薦版：自動網域／secret）
+├─ docker-compose.prod.yml     # 正式環境（單容器，手控變數版）
+├─ Dockerfile                  # 正式 build（Node 24 LTS）
 └─ Dockerfile.dev              # 開發依賴安裝
 ```
 

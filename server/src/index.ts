@@ -61,8 +61,19 @@ app.use('/api/stats', statsRouter);
 if (IS_PROD) {
   const publicDir = resolve(__dirname, '..', 'public');
   if (existsSync(publicDir)) {
-    app.use(express.static(publicDir));
-    // SPA fallback：非 /api、/api/auth 路徑都回 index.html
+    // 只對 /assets 套用長快取（Vite build 產出的 JS/CSS/圖片檔名含 hash，
+    // 內容變更時檔名會變，可安全長快取）。
+    app.use('/assets', express.static(join(publicDir, 'assets'), {
+      maxAge: '7d',
+      immutable: true,
+    }));
+    // 其他靜態檔（如 favicon、robots.txt）：index: false 避免 static 攔截根路徑 /，
+    // 讓 index.html 一律由下方的 SPA fallback 處理（不帶長快取，永遠取最新版）。
+    app.use(express.static(publicDir, {
+      index: false,
+      maxAge: '5m',
+    }));
+    // SPA fallback：非 /api、/api/auth 路徑都回 index.html（含根路徑 /）
     app.get(/^(?!\/api\/).*/, (_req, res) => {
       res.sendFile(join(publicDir, 'index.html'));
     });

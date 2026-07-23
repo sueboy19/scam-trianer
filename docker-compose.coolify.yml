@@ -1,0 +1,73 @@
+# ============================================
+# 正式環境 docker-compose — Coolify 專用版
+# ============================================
+# 用途：在 Coolify 以「Docker Compose」Build Pack 部署。
+#       Build Pack 選 Docker Compose，Compose Path 指到此檔。
+#
+# 與 docker-compose.prod.yml 的差異：
+#   1. 用 Coolify 自動注入的 COOLIFY_URL 填入 BETTER_AUTH_URL／CLIENT_URL，
+#      不必在 UI 手填網域環境變數（COOLIFY_URL = 你在 Coolify 綁定的網域完整 URL）。
+#   2. BETTER_AUTH_SECRET 用 Coolify 隨機產生器 SERVICE_PASSWORD_64，首次部署自動產生。
+#   3. 容器名稱交由 Coolify 管理（COOLIFY_CONTAINER_NAME）。
+#
+# Coolify 部署步驟：
+#   1. New Resource → 選 Docker Compose (Build Pack)，Compose Path 指到此檔
+#   2. Domains 綁定你的網域（例如 https://scam.example.com）
+#   3. OAuth 憑證在 Environment Variables 填入（見 .env.example，可選）
+#   4. 確認 Storages 有 /app/data 的 persistent volume
+#   5. DNS A record 指向 VM IP → Deploy（Coolify/Traefik 自動處理 HTTPS）
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ${COOLIFY_CONTAINER_NAME:-scam-trainer}
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      # 不設 NODE_OPTIONS：讓 Node 20+ 依容器 cgroup 限制自動偵測 heap 上限
+      # （手動設會覆蓋自動偵測，反而更差）。better-sqlite3 native 記憶體靠
+      # 下方 memory limit 預留空間。
+      - DB_PATH=/app/data/app.db
+      # ── 網域：用 Coolify 自動注入的 COOLIFY_URL ──
+      # COOLIFY_URL = 你在 Coolify UI 綁定的網域完整 URL（含 https://）。
+      # 單容器架構下，前端與 API 同網域，CLIENT_URL 直接沿用 BETTER_AUTH_URL。
+      - BETTER_AUTH_URL=${COOLIFY_URL:?需要在 Coolify UI 綁定網域（COOLIFY_URL 由 Coolify 自動注入）}
+      - CLIENT_URL=${COOLIFY_URL}
+      # ── Secret：用 Coolify 隨機產生器，首次部署自動產生 64 字元隨機字串 ──
+      # （SERVICE_PASSWORD_64 是 Coolify 的 magic variable，首次部署時自動填值）
+      - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET:-${SERVICE_PASSWORD_64}}
+      # ── OAuth providers（皆可選，未填即不啟用該 provider）──
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
+      - FACEBOOK_CLIENT_ID=${FACEBOOK_CLIENT_ID:-}
+      - FACEBOOK_CLIENT_SECRET=${FACEBOOK_CLIENT_SECRET:-}
+      - LINE_CHANNEL_ID=${LINE_CHANNEL_ID:-}
+      - LINE_CHANNEL_SECRET=${LINE_CHANNEL_SECRET:-}
+      - INSTAGRAM_CLIENT_ID=${INSTAGRAM_CLIENT_ID:-}
+      - INSTAGRAM_CLIENT_SECRET=${INSTAGRAM_CLIENT_SECRET:-}
+    volumes:
+      - sqlite_data:/app/data
+    expose:
+      - "3000"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      # 冷啟動需載入 better-sqlite3 native binding + Better Auth + schema + seed，
+      # 首次/映像檔冷時可能接近 30s；拉長 start_period 避免被誤判 unhealthy 觸發重啟循環。
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          # native(sqlite) + V8 heap + 靜態檔需足夠空間；512M 對 2GB+ VM 無負擔，
+          # 且能吸收 OAuth/seed 尖峰，避免 OOM killed。
+          memory: 512M
+        reservations:
+          memory: 128M
+
+volumes:
+  sqlite_data:
