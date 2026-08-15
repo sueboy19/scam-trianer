@@ -8,7 +8,7 @@ import { existsSync } from 'node:fs';
 
 import { auth, AUTH_PATH } from './auth/auth.js';
 import { db } from './db/index.js';
-import { seedIfEmpty } from './db/seed.js';
+import { syncScenarios } from './db/seed.js';
 import scenariosRouter from './routes/scenarios.js';
 import attemptsRouter from './routes/attempts.js';
 import historyRouter from './routes/history.js';
@@ -90,12 +90,18 @@ app.use((err: unknown, _req: express.Request, res: express.Response, _next: expr
 
 // ---- 啟動 ----
 async function main() {
-  // 種子題庫（若 DB 為空才注入）
+  // 題庫同步（冪等 upsert：新題插入、既有題更新內容，使用者紀錄不受影響）
   try {
-    const inserted = await seedIfEmpty(db);
-    if (inserted) console.log(`[seed] 已注入 ${inserted} 個情境題庫`);
+    const { inserted, total } = syncScenarios(db);
+    if (total === 0) {
+      // loadSeedScenarios 已印出警告
+    } else if (inserted > 0) {
+      console.log(`[seed] 題庫同步：新插入 ${inserted} 題（種子檔共 ${total} 題）`);
+    } else {
+      console.log(`[seed] 題庫已是最新（${total} 題）`);
+    }
   } catch (err) {
-    console.error('[seed] 種子注入失敗:', err);
+    console.error('[seed] 題庫同步失敗:', err);
   }
 
   app.listen(PORT, () => {
