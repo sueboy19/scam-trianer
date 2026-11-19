@@ -1,7 +1,10 @@
 import { betterAuth } from 'better-auth';
 import Database from 'better-sqlite3';
+import { Kysely, SqliteDialect } from 'kysely';
 import { dirname, resolve } from 'node:path';
 import { mkdirSync } from 'node:fs';
+
+import { ensureAuthSchema } from './schema.js';
 
 /**
  * Better Auth 實例。
@@ -57,12 +60,23 @@ export const auth = betterAuth({
     /**
      * 給 Better Auth 一條獨立的 SQLite 連線，指向同一個檔案。
      * 開啟 WAL 後多連線共存沒問題。
+     *
+     * better-auth 1.7 起，{ db, type } 的 db 必須是 Kysely 實例
+     * （內部改用 kysely-adapter），raw better-sqlite3 要先用 SqliteDialect 包一層。
      */
-    db: (() => {
-      const dbPath = resolve(process.env.DB_PATH || './data/app.db');
-      mkdirSync(dirname(dbPath), { recursive: true });
-      return new Database(dbPath);
-    })(),
+    db: new Kysely({
+      dialect: new SqliteDialect({
+        database: (() => {
+          const dbPath = resolve(process.env.DB_PATH || './data/app.db');
+          mkdirSync(dirname(dbPath), { recursive: true });
+          const conn = new Database(dbPath);
+          // better-auth 1.7 對缺表/缺欄位會直接拒絕啟動（舊版是自動建表），
+          // 冪等補齊 schema，確保舊 volume DB 也能無痛升級。
+          ensureAuthSchema(conn);
+          return conn;
+        })(),
+      }),
+    }),
     type: 'sqlite',
   },
   baseURL: process.env.BETTER_AUTH_URL || 'http://localhost:3000',

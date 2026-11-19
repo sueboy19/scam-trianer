@@ -12,11 +12,12 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "better-auth": "^1.2.0",
+    "better-auth": "^1.7.26",
     "better-sqlite3": "^12.0.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
+    "kysely": "^0.29.9",
     "nanoid": "^5.0.9"
   },
   "devDependencies": {
@@ -26,5 +27,12 @@
     "@types/node": "^22.10.2",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2"
+  },
+  "allowScripts": {
+    "better-sqlite3@12.11.1": true,
+    "esbuild@0.28.1": true
+  },
+  "overrides": {
+    "undici": "^6.29.1"
   }
 }
