@@ -52,6 +52,12 @@ RUN cd server && (npm ci --omit=dev --legacy-peer-deps || npm install --omit=dev
     && npm cache clean --force \
     && chown -R node:node /app/server
 
+# 資安掃描（Trivy）掃的是整個 image：node 基礎映像檔內建的 npm 自己捆綁了
+# undici 6.x、brace-expansion 等舊版依賴（屬 npm 內部依賴，與本 app 無關，
+# package-lock / npm audit 都看不到）。runtime 只執行 node（CMD 與 healthcheck
+# 都不用 npm），依賴裝完後直接移除 npm/npx 與 cache，消除掃描來源並縮小映像檔。
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx /root/.npm
+
 # 從 builder 複製產物（server/package.json 上面已 COPY，不重複）；直接以 node 所有權複製
 COPY --from=builder --chown=node:node /app/server/dist ./server/dist
 COPY --from=builder --chown=node:node /app/server/public ./server/public
